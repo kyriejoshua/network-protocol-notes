@@ -1,2 +1,2 @@
 > [[UDP]]
-> [[TCP]]
+> [[TCP/index|TCP]]
