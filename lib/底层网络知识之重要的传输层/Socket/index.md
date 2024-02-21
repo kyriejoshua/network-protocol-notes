@@ -13,22 +13,34 @@ Socket 通常使用 IP 地址和端口号来标识通信的两端，它们一起
 
 在网络编程中，Socket 可以被看作是两个程序（通常运行在不同计算机上）之间通信链路的一个端点。这种通信可以是基于不同类型的协议，例如 TCP（传输控制协议）或 UDP（用户数据报协议）。
 
+使用套接字建立连接，用 IP 地址和端口号来区分多个同时连接的套接字。
+* 客户端 IP 地址
+* 客户端端口号
+* 服务端 IP 地址
+* 服务端端口号
+
 ## Socket连接流程
 
 ### 基于 TCP 的套接字调用
 
 TCP Sockets 是基于连接的，这意味着在数据传输开始之前，必须首先建立一个连接。TCP 提供了一种可靠的数据流服务，确保无差错、不重复且按顺序交付数据报文。这种 Socket 类型是面向连接的，因此它们在通信之前要经过三次握手过程建立连接。
 
+
 ![[TCP的Socket.png]]
 
 #### 基于 TCP 建立连接的过程
 
-1. 服务端初始化 socket，然后与端口绑定(`bind`)；
-2. 对端口进行监听(`listen`)，调用accept阻塞，等待客户端连接；
-3. 在这时如果有个客户端初始化一个Socket，然后连接服务器(`connect`)；
-4. 通过三次握手建立成功的连接；
-5. 客户端发送数据请求，服务器端接收请求并处理请求；
-6. 把回应数据发送给客户端，客户端读取数据，最后关闭连接，一次交互结束。
+1. 服务端初始化一个主动 Socket(`Active Socket`)，然后与 IP 地址和端口绑定(`bind`)；
+2. 服务端对端口进行监听(`listen`)，开始监听客户端的连接请求，调用 `accept`
+	* 调用 `listen` 后，主动 Socket 会变成监听 Socket.
+3. 服务端监听过程中，客户端就可以初始化 Socket，然后调用(`connect`)连接服务端；
+4. 客户端在 `connect` 中指定 IP 地址和端口号，开始建立三次握手的连接；
+5. 通过三次握手建立成功的连接，连接成功后服务端的 `accept` 函数会返回另一个 socket；
+	* 服务端会从已完成的连接里找到并返回（`Connected Socket`）
+	* 如果调用`accept`没有获取到成功连接的 Socket，那么就会一直阻塞，直到客户端连接；
+6. 客户端发送数据请求，服务器端接收请求并处理请求；
+	* 双方通过 `read` 和 `write` 函数来读写数据，就像写入文件流一样；
+7. 把回应数据发送给客户端，客户端读取数据，最后关闭连接，一次交互结束。
 
 ```mermaid
 sequenceDiagram
@@ -55,9 +67,24 @@ sequenceDiagram
 
 ```
 
+在建立连接的过程中，其实有两个 Socket，一个是监听的 Socket，一个是已连接 Socket。
+内核中，会分别维护两个队列，一个是已经成功建立连接的 Socket（三次握手完成），处于 `established` 的状态，另一个是未完成三次握手的，处于 `syn_rcvd` 的状态。
+
+#### TCP 的 Socket 就是文件流
+
+在内核中，Socket是一个文件，对应就有文件描述符。每一个进程都有一个数据结构 `task_struct`，里面指向一个文件描述符数组，来列出这个进程打开的所有文件的文件描述符。
+文件描述符是一个整数，是这个数组的下标。
+
+这个结构里主要是两个队列，一个是发送队列，一个是接收队列。队列里保存的是缓存 `sk_buff`.
+缓存里有完整的数据包的结构。
+
+![[Socket队列.png]]
+
 ### 基于 UDP 的套接字调用
 
 相对于 TCP，UDP Sockets 是无连接的，它们发送的数据报文可能会丢失或是无序到达。UDP 不保证通信的可靠性，但由于没有建立连接的开销，它通常提供更快的数据传输速度。UDP 常用于广播通信或实时应用，例如视频会议或在线游戏，这些应用对速度要求高，可以容忍一定程度的数据丢失。
+
+UDP 面向无连接，所以不需要三次握手，也就是不需要调用 `listen` 和  `connect` 函数来连接，但还是需要 bind 函数来绑定 IP 地址和端口号。而且也不需要每对连接都建立一组 socket，只要有一个 socket，就可以和多个客户端通信。
 
 ![[UDP的Socket.png]]
 
@@ -195,3 +222,50 @@ if __name__ == '__main__':
 如果没有这个无限循环，服务器将接受一个客户端连接，处理完成后就会退出，这意味着它不会再继续等待其他客户端连接。而在实际的服务器应用中，我们通常会希望服务器能持续服务多个客户端，而不是服务一个后就停止运行。
 
 一个无限循环确保了 TCP 服务器可以像守护进程一样运行，永远地等待并处理客户端的连接请求。当然，在实际部署中，服务器通常会加入逻辑来优雅地处理关闭请求，以及错误处理和资源管理，以确保服务器稳定运行。
+
+#### 创建 UDP 服务端
+
+创建文件 `udp_server.py `
+
+```python
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# 绑定端口:
+s.bind(('127.0.0.1', 9999))
+
+print('Bind UDP on 9999...')
+while True:
+    # 接收数据:
+    data, addr = s.recvfrom(1024)
+    print('Received from %s:%s.' % addr)
+    s.sendto(b'Hello, %s!' % data, addr)
+```
+#### 创建 UDP 客户端
+
+创建文件 `udp_client.py `
+
+```python
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+for data in [b'Michael', b'Tracy', b'Sarah']:
+    # 发送数据:
+    s.sendto(data, ('127.0.0.1', 9999))
+    # 接收数据:
+    print(s.recv(1024).decode('utf-8'))
+s.close()
+```
+
+分别运行 `python udp_server.py` `python udp_client.py`. 可以得到以下日志：
+
+```shell
+Bind UDP on 9999...
+Received from 127.0.0.1:56796.
+Received from 127.0.0.1:56796.
+Received from 127.0.0.1:56796.
+```
+
+```shell
+Hello, Michael!
+Hello, Tracy!
+Hello, Sarah!
+```
