@@ -13,14 +13,13 @@ Socket 通常使用 IP 地址和端口号来标识通信的两端，它们一起
 
 在网络编程中，Socket 可以被看作是两个程序（通常运行在不同计算机上）之间通信链路的一个端点。这种通信可以是基于不同类型的协议，例如 TCP（传输控制协议）或 UDP（用户数据报协议）。
 
-使用套接字建立连接，用 IP 地址和端口号来区分多个同时连接的套接字。
-* 客户端 IP 地址
-* 客户端端口号
-* 服务端 IP 地址
-* 服务端端口号
-
 ## Socket连接流程
 
+使用套接字建立连接时，用 IP 地址和端口号来区分多个同时连接的套接字。
+* 客户端 IP 地址；
+* 客户端端口号；
+* 服务端 IP 地址；
+* 服务端端口号；
 ### 基于 TCP 的套接字调用
 
 TCP Sockets 是基于连接的，这意味着在数据传输开始之前，必须首先建立一个连接。TCP 提供了一种可靠的数据流服务，确保无差错、不重复且按顺序交付数据报文。这种 Socket 类型是面向连接的，因此它们在通信之前要经过三次握手过程建立连接。
@@ -35,8 +34,8 @@ TCP Sockets 是基于连接的，这意味着在数据传输开始之前，必�
 	* 调用 `listen` 后，主动 Socket 会变成监听 Socket.
 3. 服务端监听过程中，客户端就可以初始化 Socket，然后调用(`connect`)连接服务端；
 4. 客户端在 `connect` 中指定 IP 地址和端口号，开始建立三次握手的连接；
-5. 通过三次握手建立成功的连接，连接成功后服务端的 `accept` 函数会返回另一个 socket；
-	* 服务端会从已完成的连接里找到并返回（`Connected Socket`）
+5. 通过三次握手建立成功的连接，连接成功后服务端的 `accept` 函数会返回另一个 Socket；
+	* 服务端会从已完成的连接里找到并返回 Socket（`Connected Socket`）
 	* 如果调用`accept`没有获取到成功连接的 Socket，那么就会一直阻塞，直到客户端连接；
 6. 客户端发送数据请求，服务器端接收请求并处理请求；
 	* 双方通过 `read` 和 `write` 函数来读写数据，就像写入文件流一样；
@@ -72,17 +71,19 @@ sequenceDiagram
 
 #### TCP 的 Socket 就是文件流
 
-在内核中，Socket是一个文件，对应就有文件描述符。每一个进程都有一个数据结构 `task_struct`，里面指向一个文件描述符数组，来列出这个进程打开的所有文件的文件描述符。
-文件描述符是一个整数，是这个数组的下标。
+在内核中，Socket 是一个文件，对应就有文件描述符。
+每一个进程都有一个数据结构 `task_struct`，里面指向一个文件描述符数组，来列出这个进程打开的所有文件的文件描述符。
+文件描述符是**一个整数**，是这个**数组的下标**。
 
-这个结构里主要是两个队列，一个是发送队列，一个是接收队列。队列里保存的是缓存 `sk_buff`.
-缓存里有完整的数据包的结构。
+这个结构里主要是两个队列，一个是**发送队列**，一个是**接收队列**。队列里保存的是缓存 `sk_buff`.
+这个缓存里有完整的数据包的结构。
 
 ![[Socket队列.png]]
 
 ### 基于 UDP 的套接字调用
 
-相对于 TCP，UDP Sockets 是无连接的，它们发送的数据报文可能会丢失或是无序到达。UDP 不保证通信的可靠性，但由于没有建立连接的开销，它通常提供更快的数据传输速度。UDP 常用于广播通信或实时应用，例如视频会议或在线游戏，这些应用对速度要求高，可以容忍一定程度的数据丢失。
+相对于 TCP，UDP Sockets 是无连接的，它们发送的数据报文可能会丢失或是无序到达。UDP 不保证通信的可靠性，但由于没有建立连接的开销，它通常提供更快的数据传输速度。
+UDP 常用于广播通信或实时应用，例如视频会议或在线游戏，这些应用对速度要求高，可以容忍一定程度的数据丢失。
 
 UDP 面向无连接，所以不需要三次握手，也就是不需要调用 `listen` 和  `connect` 函数来连接，但还是需要 bind 函数来绑定 IP 地址和端口号。而且也不需要每对连接都建立一组 socket，只要有一个 socket，就可以和多个客户端通信。
 
@@ -111,7 +112,7 @@ sequenceDiagram
 
 Socket 编程是指编写程序以创建 **Sockets** 并通过它们进行通信。*注意这里其实是多个 Socket。*
 
-Socket 库支持多种编程语言，包括 Python 、C、C++等。在 Python 中，有一个内置的 `Socket` 模块，可以直接使用，进行网络编程。例如在 Python 中使用 `socket` 库；在 C/C++ 中使用 `POSIX Sockets`，或者在 JavaScript 的 Node.js 环境中使用 `net` 模块。
+Socket 库支持多种编程语言，包括 Python 、C、C++等。一般在各类语言中，都有内置的 `Socket` 模块，可以直接使用，进行网络编程。例如在 Python 中使用 `socket` 库；在 C/C++ 中使用 `POSIX Sockets`，或者在 JavaScript 的 Node.js 环境中使用 `net` 模块。
 
 在典型的客户端-服务器模型中，服务器会在特定端口上监听连接请求，等待客户端发起连接。一旦连接建立，客户端和服务器就可以通过 Socket 发送和接收数据。
 
@@ -179,13 +180,16 @@ client.on('end', () => {
 以上就是用 Node.js 的 `net` 模块创建基本的 TCP 服务器和客户端的例子。如果需要使用 UDP，可以查看 `dgram` 模块的文档以获取如何创建和操作 UDP sockets 的信息。[**dgram**](https://nodejs.org/api/dgram.html)
 
 Nodejs 的 `net` 模块提供的 TCP 网络 API 是专门针对流式套接字的，因此调用 `net.createConnection` 或 `net.Socket()` 创建一个新的套接字实例时，默认情况下就是一个 TCP 套接字，而不用显式指定套接字类型来创建。
-其他的一些语言的网络语会需要在调用时指定类型，比如 Python。
+
+*其他的一些语言的网络语会需要在调用时指定类型，比如 Python。*
 
 ### Python实践
 
-python 的 socket 库需要制定 socket.AF_INET 和 `socket.SOCK_STREAM` 来创建一个 IPv4 的套接字。
+python 的 socket 库需要指定 `socket.AF_INET` 和 `socket.SOCK_STREAM` 来创建一个 **IPv4** 的套接字。
 
-#### 创建 TCP 服务端
+#### 建立有效的 TCP 连接
+
+##### 创建 TCP 服务端
 
 ```python
 import socket
@@ -195,7 +199,8 @@ def tcp_server():
   serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
   # 获取本地主机名
-  host = socket.gethostname()
+  # host = socket.gethostname()
+  host = '127.0.0.1'
   port = 9999
 
   # 绑定端口号
@@ -203,14 +208,21 @@ def tcp_server():
 
   # 设置最大连接数，超过后排队
   serversocket.listen(5)
+  print('Waiting for connection...')
 
   while True:
     # 建立客户端连接
     clientsocket, addr = serversocket.accept()
     print(f"连接地址：{str(addr)}")
-
     msg = '欢迎访问TCP服务器！' + "\r\n"
     clientsocket.send(msg.encode('utf-8'))
+    # 发送消息返回给客户端
+    while True:
+        data = clientsocket.recv(1024)
+        time.sleep(1)
+        if not data or data.decode('utf-8') == 'exit':
+            break
+        clientsocket.send(('Hello, %s!' % data.decode('utf-8')).encode('utf-8'))
     clientsocket.close()
 
 if __name__ == '__main__':
@@ -219,11 +231,48 @@ if __name__ == '__main__':
 
 在 Python 示例中，服务器创建了一个*无限循环*，这是因为 TCP 服务器的典型行为是持续运行并等待客户端的连接请求。服务器需要在一个无限循环中运行，以便它可以不断地接受新的连接，处理客户端发送的数据，然后等待更多的连接。
 
-如果没有这个无限循环，服务器将接受一个客户端连接，处理完成后就会退出，这意味着它不会再继续等待其他客户端连接。而在实际的服务器应用中，我们通常会希望服务器能持续服务多个客户端，而不是服务一个后就停止运行。
+如果没有这个无限循环，服务器只会接受一个客户端连接，并且处理完成后就会退出，这意味着它不会再继续等待其他客户端连接。而在实际的服务器应用中，我们通常会希望服务器能持续服务多个客户端，而不是服务一个后就停止运行。
 
 一个无限循环确保了 TCP 服务器可以像守护进程一样运行，永远地等待并处理客户端的连接请求。当然，在实际部署中，服务器通常会加入逻辑来优雅地处理关闭请求，以及错误处理和资源管理，以确保服务器稳定运行。
 
-#### 创建 UDP 服务端
+##### 创建 TCP 客户端
+
+```python
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# 建立连接:
+s.connect(('127.0.0.1', 9999))
+# 接收欢迎消息:
+print(s.recv(1024).decode('utf-8'))
+for data in [b'Michael', b'Tracy', b'Sarah']:
+    # 发送数据:
+    s.send(data)
+    print(s.recv(1024).decode('utf-8'))
+s.send(b'exit')
+s.close()
+```
+
+这里我们在两端都进行了打印，服务端会打印出
+
+```shell
+Waiting for connection...
+连接地址：('127.0.0.1', 61714)
+```
+
+其中端口号是随机变化的，随着网络分配而变动。
+客户端会收到服务端返回的打印消息
+
+```shell
+欢迎访问TCP服务器！
+
+Hello, Michael!
+Hello, Tracy!
+Hello, Sarah!
+```
+
+#### 建立有效的 UDP 连接
+
+##### 创建 UDP 服务端
 
 创建文件 `udp_server.py `
 
@@ -240,7 +289,8 @@ while True:
     print('Received from %s:%s.' % addr)
     s.sendto(b'Hello, %s!' % data, addr)
 ```
-#### 创建 UDP 客户端
+
+##### 创建 UDP 客户端
 
 创建文件 `udp_client.py `
 
