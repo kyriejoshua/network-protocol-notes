@@ -82,7 +82,7 @@ Linux 默认的逻辑是，如果这是一个跨网段的调用，它便不会�
 
 * 客户端在 BOOT P里，接受某个 DHCP 分配的 IP，通常是最先到达的包。
 * 因为没有得到  DHCP Server 的确认，客户端仍然使用 `0.0.0.0` 的地址广播到 `255.255.255.255` 进行回复。
-	* 客户端的回复是 DHCP Request 广播包，广播数据包中包含客户端的 MAC地址，接受租约中的 IP 地址、提供此租约的 DHCP 服务器地址等，并告诉所有的 DHCP 它将接受哪一个 DHCP 服务器提供的 IP 地址，让他们其他的撤销提供的 IP 地址。以便提供给下一个 IP 租用者。
+	* 客户端的回复是 DHCP Request 广播包，广播数据包中包含客户端的 MAC 地址，接受租约中的 IP 地址、提供此租约的 DHCP 服务器地址等，并告诉所有的 DHCP 它将接受哪一个 DHCP 服务器提供的 IP 地址，让他们其他的撤销提供的 IP 地址。以便提供给下一个 IP 租用者。
 
 | 各种头   | 流程                                                       |
 | -------- | ---------------------------------------------------------- |
@@ -124,7 +124,9 @@ DHCP 提供地址的方式也是有租期的。
 
 #### PXE 的诞生背景
 
-通常的笔记本需求，没有需要安装操作系统这种需求，一般出厂时系统已经自带。但在数据中心里，管理员可能面对的是几百甚至更多空的机器，需要给这些机器一起安装操作系统，就要有更好的解决方案。也就是在自动安装 IP 之后，能否更进一步，再自动安装系统。
+背景：批量安装机器的操作系统
+
+通常的笔记本电脑，没有需要安装操作系统这种需求，一般出厂时系统已经自带。但在数据中心里，管理员可能面对的是几百甚至更多空的机器，需要给这些机器一起安装操作系统，就要有更好的解决方案。也就是在自动安装 IP 之后，能否更进一步，再自动安装系统。
 
 安装操作系统，一般需要光盘。所以可以把原本在光盘里要安装的操作系统，放在一个服务器上，让客户端去下载，但问题是客户端并不知道去哪里下载这个操作系统，而且客户端本身也需要一个操作系统才能运行。这里可以使用 BIOS 这个小型操作系统来完成。
 
@@ -133,7 +135,7 @@ DHCP 提供地址的方式也是有租期的。
 #### 什么是 PXE 
 
 所以安装操作系统的过程，是在 BIOS 启动之后。于是这个过程就叫**预启动执行环境(Pre-boot Execution Environment)**. 也可以理解为使用网络原理进行安装操作系统。
-* PXE 协议分为客户端和服务端，由于没有操作系统，只能把客户端放在 BIOS 里，也就是计算机的网卡中包含 PXE 客户端。当计算机启动时，BIOS 把 PXE 客户端调入内存，就可以连接到服务端做一些操作。
+* PXE 协议分为客户端和服务端，由于没有操作系统，只能把客户端放在 BIOS 里，也就是计算机的**网卡中包含 PXE 客户端**。当计算机启动时，BIOS 把 PXE 客户端调入内存，就可以连接到服务端做一些操作。
 * PXE 本身也需要一个 IP 地址，因为它启动客户端之后，可以发送一个 DHCP 的请求，让 DHCP Server 给它分配一个地址。但实际上 PXE 客户端启动的时候，没有自己的地址？
 * DHCP Server 在分配 IP 地址外，还可以做其他事情。参照下面的配置：
 
@@ -173,29 +175,43 @@ PXE 的工作流程如下：
 
 ```mermaid
 sequenceDiagram
+actor User
 participant PXE 客户端
 participant TFTP Server
 participant DHCP Server
 
-PXE 客户端->>DHCP Server: 我来了，操作系统和 IP 我都没有
-activate DHCP Server
-DHCP Server->>PXE 客户端: 给你个 IP 地址，还有启动文件 pexlinux.0 的位置
-deactivate DHCP Server
+User-->>PXE 客户端:启动
+PXE 客户端->>+DHCP Server: 我来了，操作系统和 IP 我都没有
+DHCP Server->>-PXE 客户端: 给你个 IP 地址，还有启动文件 pexlinux.0 的位置
+activate PXE 客户端
 PXE 客户端->>+TFTP Server: 给我启动文件 pexlinux.0 吧
+deactivate PXE 客户端
 TFTP Server->>-PXE 客户端: 好的，给你 pexlinux.0
+activate PXE 客户端
 PXE 客户端->>PXE 客户端: 执行 pxelinux.0
 PXE 客户端->>TFTP Server: 给个 pxelinux.cfg 配置文件，我要用来启动系统
+deactivate PXE 客户端
 activate TFTP Server
 TFTP Server->>PXE 客户端: 给你配置文件，里面有内核和 initramfs 的配置
 deactivate TFTP Server
+activate PXE 客户端
 PXE 客户端->>PXE 客户端: 读取配置文件
 PXE 客户端->>+TFTP Server: 给我 linux 内核
+deactivate PXE 客户端
 TFTP Server->>-PXE 客户端: 好的，给你
+activate PXE 客户端
 PXE 客户端->>+TFTP Server: 给我 initramfs
+deactivate PXE 客户端
 TFTP Server->>-PXE 客户端: 好的，给你
+activate PXE 客户端
 PXE 客户端->>PXE 客户端: 启动 Linux 内核
+deactivate PXE 客户端
+PXE 客户端 -->> User: 安装
 ```
 
 #### PXE 的应用
 
 PXE 的应用主要在云计算领域。
+- **企业服务器部署**：快速批量安装操作系统，尤其适用于数据中心。
+- **无盘工作站**：客户端通过网络启动，系统与数据集中管理（如网吧、学校机房）。
+- **系统恢复与维护**：通过网络加载急救环境进行故障修复。
