@@ -7,6 +7,7 @@ ICMP 是互联网控制报文协议。
 ### 1. ICMP 协议的格式
 
 ICMP 是封装在 IP 包里面的，因为传输数据包的时候需要**源地址**和**目标地址**。
+因此 ICMP 是作用于 OSI 模型里的第三层的协议，也就是网络层。
 
 ![](https://static001.geekbang.org/resource/image/20/e2/201589bb205c5b00ad42e0081aa46fe2.jpg?wh=3043*1243)
 
@@ -27,19 +28,80 @@ block-beta
   space:5
   block:group2:3
     columns 4
-    l["标识符"] m["序号"] n["数据"] o["和实际类型相关"]
+    l["标识符"] m["序列号"] n["数据"] o["和实际类型相关"]
   end
   space:8
   space:5
   block:group3:3
     columns 4
-    p["标识符"] q["序号"] r["数据"] o["正文"]
+    p["标识符"] q["序列号"] r["数据"] o["正文"]
   end
   B --> group1
   k --> group2
   k --> group3
   
 
+```
+##### 1.1.1 IP 包头
+
+开头的 IP 头的结构，IPv4 头部
+
+```mermaid
+packet-beta
+title IP 头内容(bytes)
+0: "Version"
+1: "IHL"
+2: "TOS"
+3-4: "Total Length"
+5-6: "ID"
+7-8: "Flags & Frag Offset"
+9: "TTL"
+10: "Protocol"
+11-12: "Checksum"
+13-16: "源IPV4"
+17-20: "目标 IPV4"
+21-31: "Options"
+```
+```mermaid
+packet-beta
+title IP 头内容(bits)
+0-3: "Version"
+4-7: "IHL"
+8-15: "TOS"
+16-31: "Total Length"
+32-47: "ID"
+48-50: "Flags"
+51-63: "Frag Offset"
+64-71: "TTL"
+72-79: "Protocol"
+80-95: "Checksum"
+96-127: "源IPV4"
+128-159: "目标 IPV4"
+160-188: "Options 可变数据"
+189-191: "Padding"
+```
+##### 1.1.2 ICMP 包格式
+
+```mermaid
+packet-beta
+title ICMP 报文内容(bytes)
+0: "Type"
+1: "Code"
+2: "Checksum"
+3-4: "ID"
+5-6: "Sequence"
+7-31: "Payload 可变，根据实际情况而定"
+```
+
+```mermaid
+packet-beta
+title ICMP 报文内容(bits)
+0-7: "Type"
+8-15: "Code"
+16-31: "Checksum"
+32-47: "ID"
+48-63: "Sequence"
+64-95: "Payload 可变，根据实际情况而定"
 ```
 
 ### 2. ICMP 的类型

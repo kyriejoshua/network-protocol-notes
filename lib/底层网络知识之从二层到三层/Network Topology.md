@@ -1,22 +1,18 @@
 ## 一、拓扑结构
 
-拓扑结构是由多个交换机连接起来组成的。
+**拓扑结构是由多个交换机连接起来组成的。**
 
 ![](https://static001.geekbang.org/resource/image/08/29/0867321c36cc52bd3dd4d7622583fa29.jpg?wh=2866*2176)
 
 ### 1. 解决环路问题
 
-TODO 待学习补充
-
-拓扑结构是多个交换机组成的结构。
-
-交换机传播数据的方式是广播，就有可能出现环路问题，所有数据同时在广播，会阻塞通信，占用过量资源，导致正常数据无法传输。
+交换机传播数据的方式是广播，所有端口同时在广播，就有可能出现环路问题，所有数据同时在广播，会阻塞通信，占用过量资源，导致正常数据无法传输。
 
 #### 1.1 STP 算法
 
 **生成树协议(Spanning Tree Protocol)，作用在 OSI 网络模型中第二层的通信协议。**
 
-该算法通过阻塞冗余链路，把物理上可能形成环路的网络在逻辑上变成一个无环的树形结构。
+该算法通过阻塞冗余链路，把**物理上**可能形成环路的网络在**逻辑上**变成一个无环的树形结构。
 
 ##### 1.1.1 STP 相关定义
 
@@ -47,9 +43,18 @@ packet-beta
   bitsPerRow:4
 ---
 packet-beta
+title BPDU 报头(bytes)
 0-1: "PID"
 2: "Version"
 3: "BPDU Type"
+```
+
+```mermaid
+packet-beta
+title BPDU 报头(bits)
+0-15: "PID"
+16-23: "Version"
+24-31: "BPDU Type"
 ```
 
 ```mermaid
@@ -74,6 +79,7 @@ packet-beta
   bitsPerRow:4
 ---
 packet-beta
+title BPDU 数据(bytes)
 0: "Flags"
 1-8: "Root Bridge ID"
 9-12: "Root Path Cost"
@@ -84,6 +90,27 @@ packet-beta
 27-28: "Hello Time"
 29-30: "Forward Delay"
 ```
+```mermaid
+---
+packet-beta
+  bitsPerRow:4
+---
+packet-beta
+title BPDU 数据(bits)
+0-7: "Flags"
+8-71: "Root Bridge ID"
+72-103: "Root Path Cost"
+104-107: "Bridge Priority"
+108-119: "System Extenion ID"
+120-167: "Mac Address"
+168-171: "Port Priority"
+172-183: "Port ID"
+184-199: "Message Age"
+200-215: "Max Age"
+216-231: "Hello Time"
+232-247: "Forward Delay"
+```
+
 TCN BPDU 则只有 Flags，没有其他字段。
 
 | **字段名**              | **长度** | **描述**                                                           | **版本差异** (STP/RSTP/MSTP) |
@@ -119,6 +146,11 @@ TCN BPDU 则只有 Flags，没有其他字段。
 
 ###### 优先级向量
 
+优先级向量本质上是一组 ID。
+* `[Root Bridge ID, Root Path Cost, Bridge ID, Port ID]`
+* 通过四个数值的比较，决定出最后的优先级。
+* 比较的顺序是有先后的，按上述数组内容的顺序进行。
+
 ##### 1.1.2 STP 工作过程
 
 1. 选择根交换机(根网桥)
@@ -142,7 +174,7 @@ packet-beta
   * 在每一个非根桥中选举一个根端口，根端口的路径开销是最小的
   * *注意根端口并不在根网桥上*
 3. 选择指定端口(Designated Port)
-  * 在非根桥中，PID 更小的会成为指定端口，负责收发数据，剩余优先级更高的端口只负责接受消息，不再转发数据
+  * 在非根桥中，PID 更小的会成为指定端口，负责收发数据，剩余优先级更高的端口只负责接收消息，不再转发数据
 4. 谁的根交换机优先级高，则整个链路就会跟谁
   * 端口也有 **PID，由 8 位的端口优先级和 8 位的端口编号组成**。其实是 **2bytes**.
 
@@ -333,7 +365,7 @@ architecture-beta
 
 能够显著减少带宽流量。
 
-#### 2.2 增强网络安全些
+#### 2.2 增强网络安全性
 
 VLAN 创建的虚拟边界，只能被路由器跨越。因此可以通过路由器来设置安全措施，限制对 VLAN 的访问。
 
