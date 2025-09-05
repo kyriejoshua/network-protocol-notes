@@ -25,22 +25,47 @@ block-beta
     h["类型"] i["代码"] j["校验和"] k["和实际类型相关"]
   end
   space:8
-  space:5
+  block:groupTCS:5
+    columns 5
+    h1["Type 8 code0"] h2["Type 0 code 0"] h3["type 3 code 1 2 3 4 5"] h4["type 4 code 4"] h5["type 11 code 0 1"] h6["type 12 code 0"] h7["type 13 code 0"] h8["type 14 code 0"] h9["type 5 code 0 1"]
+  end
   block:group2:3
     columns 4
     l["标识符"] m["序列号"] n["数据"] o["和实际类型相关"]
   end
   space:8
-  space:5
+  block:groupTC:5
+    columns 5
+    h11["回显请求用于发送ping"] h22["回显应答用于响应ping"] h33["目的不可达，有五种"] h44["源抑制，已弃用"] h55["超时"] h66["参数问题"] h77["时间戳请求"] h88["时间戳应答"] h99["重定向"]
+  end
   block:group3:3
     columns 4
     p["标识符"] q["序列号"] r["数据"] o["正文"]
   end
-  B --> group1
-  k --> group2
-  k --> group3
   
+  space:8
+  block:groupTC3:5
+    columns 5
+    tc30["0 网络不可达"] tc31["1 主机不可达"] tc32["2 协议不可达"] tc33["3 端口不可达"] tc34["4 需要分片单设置了不分片"]
+  end
+  
+  block:groupTC11:2
+    columns 1
+    tc110["0 传输过程 TTL 超时"] tc1111["1 分片重组超时"] 
+  end
 
+  block:groupTC5:2
+    columns 2
+    tc50["0 重定向到网络"] tc51["1 重定向到主机"] 
+  end
+  B --> group1
+  k --"有数据的"--> group2
+  k --> group3
+  h --"常用类型和代码"--> groupTCS
+  group4 --"含义"--> groupTC
+  h33 --"具体代码值"--> groupTC3
+  h55 --"具体代码值"--> groupTC11
+  h99 --"具体代码值"--> groupTC5
 ```
 ##### 1.1.1 IP 包头
 

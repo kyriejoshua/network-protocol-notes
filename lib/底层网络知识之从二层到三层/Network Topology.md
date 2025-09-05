@@ -312,7 +312,21 @@ block-beta
     j["2bytes"] k["3bits"] l["1bits"] m["12bits"]
   end
   
-  f1 --> vlan
+  f1 --"由以下组成"--> vlan
+```
+
+```mermaid
+packet-beta
+title VLAN 数据包 bits
+0-47: "源 MAC 地址"
+48-95: "目标 MAC 地址"
+96-111: "类型 TPID"
+112-114: "优先级 PRI"
+115: "CFI"
+116-127: "VLAN ID"
+128-143: "长度"
+144-319: "数据内容，可变(46-1500)*8"
+320-351: "FCS"
 ```
 
 #### 1.2 拓扑图示意
