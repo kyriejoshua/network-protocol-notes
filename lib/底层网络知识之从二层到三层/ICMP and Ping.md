@@ -245,7 +245,7 @@ ICMP 数据包内包含多个字段。最重要的是两个:
 
 ![](https://static001.geekbang.org/resource/image/57/21/57a77fb89bc4a5653842276c70c0d621.jpg?wh=4463*2786)
 
-#### 2.4.1 时序图
+#### 2.5.1 时序图
 
 ```mermaid
 sequenceDiagram
