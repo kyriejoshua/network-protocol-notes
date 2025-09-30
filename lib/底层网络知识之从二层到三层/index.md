@@ -8,7 +8,7 @@
 > 
 > [[Gateway|网关]]
 > 
-> [[Routeing Protocol|路由协议]]
+> [[Routing Protocol|路由协议]]
 
 ## 时序图示意图
 
