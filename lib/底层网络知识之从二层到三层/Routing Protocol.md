@@ -1,13 +1,15 @@
 # 路由协议
 
 路由器就是一台网络设备，它内部会有多张网卡。
-从一个入口进来的网络数据包，会根据路由器内的一个本地的转发信息库，来决定从哪个网口发出去。这个转发信息库就是路由表。
+
+从某一个入口进来的网络数据包，会根据路由器内的一个本地的转发信息库，来决定从哪个网口发出去。这个转发信息库就是路由表。
 
 ## 一、静态路由算法
 
 ### 1. 配置路由
 
 **本地的转发信息库称之为路由表。**
+
 路由表的信息至少包含以下三种：
 * `destination`: 目的网络，这个数据包想去哪里
 * `port` 端口：出口设备，把数据包发往哪里去
@@ -22,7 +24,8 @@
 #### 1.1 配置策略路由
 
 真实的网络环境会更加复杂，除了 IP，还需要其他参数来配置。
-根据除了 IP 以外的多个参数来配置路由，称之为策略路由。这些配置包括源 IP 地址、入口设备、TOS 等选择路由表。
+
+**根据除了 IP 以外的多个参数来配置路由，称之为策略路由。这些配置包括源 IP 地址、入口设备、TOS 等选择路由表。**
 * 静态路由通过配置复杂的策略路由来控制转发策略。
 
 ##### 1.1.1 配置策略路由的简单示例
@@ -52,14 +55,14 @@ ip route add default scope global nexthop via 100.100.100.1 weight 1 nexthop via
 
 根据这个网络拓扑图，可以将路由配置成这样：
 
-  ```shell
+```shell
 	$ ip route list table main
 	60.190.27.189/30 dev eth3  proto kernel  scope link  src 60.190.27.190
 	183.134.188.1 dev eth2  proto kernel  scope link  src 183.134.189.34
 	192.168.1.0/24 dev eth1  proto kernel  scope link  src 192.168.1.1
 	127.0.0.0/8 dev lo  scope link
 	default via 183.134.188.1 dev eth2
-	```
+```
 
 当路由这样配置的时候，就告诉这个路由器如下的规则：
 * 如果去运营商二，就走 eth3；
@@ -122,7 +125,7 @@ TODO
 
 上面讲述的是两种算法，下面讲述的是基于算法产生的协议。
 
-### 1. OSPF
+### 1. OSPF 协议
 
 OSPF（Open Shortest Path First，开放式最短路径优先）就是这样一个基于链路状态路由协议，广泛应用在数据中心中的协议。
 * 由于主要用在数据中心内部，用于路由决策，因而称为**内部网关协议（Interior Gateway Protocol，简称 IGP）**。
@@ -131,24 +134,48 @@ OSPF（Open Shortest Path First，开放式最短路径优先）就是这样一�
 
 ![](https://static001.geekbang.org/resource/image/2e/db/2eb5f4722689adf9926fded5005e02db.jpg?wh=3463*1039)
 
-### 2. BGP
+### 2. BGP 协议
 
 **外网路由协议（Border Gateway Protocol，简称 BGP）**。例如国家之间的路由协议。
-在网络中，一个个国家会成为自治系统 AS（Autonomous System）。
+在网络中，一个个国家会成为**自治系统 AS（Autonomous System）**。
 自治系统分几种类型。
 * Stub AS：对外只有一个连接。这类 AS 不会传输其他 AS 的包。例如，个人或者小公司的网络。
 * Multihomed AS：可能有多个连接连到其他的 AS，但是大多拒绝帮其他的 AS 传输包。例如一些大公司的网络。
 * Transit AS：有多个连接连到其他的 AS，并且可以帮助其他的 AS 传输包。例如主干网。
 
-每个自治系统都有边界路由器，通过边界路由器来和外界建立连接。
+**每个自治系统都有边界路由器，通过边界路由器来和外界建立连接。**
 	
 ![](https://static001.geekbang.org/resource/image/69/3d/698e368848fdbf1eb8e270983e18143d.jpg?wh=2977*2008)
 
 BGP 又分为两类，`eBGP` 和 `iBGP`。
-自治系统间，边界路由器之间使用 `eBGP` 广播路由。
+
+#### 2.1 eBGP 和 iBGP
+
+不同的自治系统间，边界路由器之间使用 `eBGP` 广播路由。
+
 内部网络也需要访问其他的自治系统。边界路由器如何将 BGP 学习到的路由导入到内部网络呢？就是通过运行 `iBGP`，使得内部的路由器能够找到到达外网目的地的最好的边界路由器。
 
-BGP 协议使用的算法是路径矢量路由协议（path-vector protocol）。它是距离矢量路由协议的升级版。
+AS1 和 AS2 之间通过 `eBGP` 广播，AS1 和 AS2 内部(Server)则使用 `iBGP`.
+
+```mermaid
+architecture-beta
+    group AS1(cloud)[AS1]
+    group AS2(cloud)[AS2]
+
+    service server3(server)[Server3] in AS1
+    service server2(server)[Server2] in AS1
+    service server1(server)[Server1] in AS1
+
+    server3:L <--> R:server1
+    server1:T <--> B:server2
+    
+    service server02(server)[Server02] in AS2
+    service server01(server)[Server01] in AS2
+    
+    server02:L <--> R:server01
+```
+
+**BGP 协议使用的算法是路径矢量路由协议（path-vector protocol）。它是距离矢量路由协议的升级版。**
 * 它通过保存自治系统 AS 的路径来避免上述错误信息传递较慢的问题。
 * 通过 `eBGP` 处理外部和 `iBGP` 处理内部，可以让各个路由都走最短的路径。
 * 在路径中将一个自治系统看成一个整体，不区分自治系统内部的路由器，这样自治系统的数目是非常有限的。也就是网络规模相对较小。
