@@ -4,7 +4,7 @@
 Socket 库是一种用于网络编程的编程接口，提供了一组函数和类，用于在计算机网络上数据通信。
 Socket 通常使用 IP 地址和端口号来标识通信的两端，它们一起构成了网络通信的基础。
 
-### 常见的套接字类型
+## 一、常见的套接字类型
 
 在创建 socket 的时候通常需要指定 socket 的类型，一般有三种：
 * `SOCK_STREAM`：面向连接的稳定通信，底层是 TCP 协议。
@@ -13,21 +13,22 @@ Socket 通常使用 IP 地址和端口号来标识通信的两端，它们一起
 
 在网络编程中，Socket 可以被看作是两个程序（通常运行在不同计算机上）之间通信链路的一个端点。这种通信可以是基于不同类型的协议，例如 TCP（传输控制协议）或 UDP（用户数据报协议）。
 
-## Socket连接流程
+## 二、Socket连接流程
 
 使用套接字建立连接时，用 IP 地址和端口号来区分多个同时连接的套接字。
 * 客户端 IP 地址；
 * 客户端端口号；
 * 服务端 IP 地址；
 * 服务端端口号；
-### 基于 TCP 的套接字调用
+
+### 1. 基于 TCP 的套接字调用
 
 TCP Sockets 是基于连接的，这意味着在数据传输开始之前，必须首先建立一个连接。TCP 提供了一种可靠的数据流服务，确保无差错、不重复且按顺序交付数据报文。这种 Socket 类型是面向连接的，因此它们在通信之前要经过三次握手过程建立连接。
 
 
 ![[TCP的Socket.png]]
 
-#### 基于 TCP 建立连接的过程
+#### 1.1 基于 TCP 建立连接的过程
 
 1. 服务端初始化一个主动 Socket(`Active Socket`)，然后与 IP 地址和端口绑定(`bind`)；
 2. 服务端对端口进行监听(`listen`)，开始监听客户端的连接请求，调用 `accept`
@@ -43,6 +44,7 @@ TCP Sockets 是基于连接的，这意味着在数据传输开始之前，必�
 
 ```mermaid
 sequenceDiagram
+	autonumber
 	box TCP2
     actor 客户端
     actor 服务端
@@ -69,7 +71,7 @@ sequenceDiagram
 在建立连接的过程中，其实有两个 Socket，一个是监听的 Socket，一个是已连接 Socket。
 内核中，会分别维护两个队列，一个是已经成功建立连接的 Socket（三次握手完成），处于 `established` 的状态，另一个是未完成三次握手的，处于 `syn_rcvd` 的状态。
 
-#### TCP 的 Socket 就是文件流
+#### 1.2 TCP 的 Socket 就是文件流
 
 在内核中，Socket 是一个文件，对应就有文件描述符。
 每一个进程都有一个数据结构 `task_struct`，里面指向一个文件描述符数组，来列出这个进程打开的所有文件的文件描述符。
@@ -80,7 +82,7 @@ sequenceDiagram
 
 ![[Socket队列.png]]
 
-### 基于 UDP 的套接字调用
+### 2. 基于 UDP 的套接字调用
 
 相对于 TCP，UDP Sockets 是无连接的，它们发送的数据报文可能会丢失或是无序到达。UDP 不保证通信的可靠性，但由于没有建立连接的开销，它通常提供更快的数据传输速度。
 UDP 常用于广播通信或实时应用，例如视频会议或在线游戏，这些应用对速度要求高，可以容忍一定程度的数据丢失。
@@ -89,9 +91,12 @@ UDP 面向无连接，所以不需要三次握手，也就是不需要调用 `li
 
 ![[UDP的Socket.png]]
 
+#### 2.1 时序图
+
 ```mermaid
 sequenceDiagram
-	box TCP2
+	autonumber
+	box 基于 UDP
     actor 客户端
     actor 服务端
     end
@@ -108,7 +113,7 @@ sequenceDiagram
 	Note left of 客户端: recvfrom()
 ```
 
-## Socket编程
+## 三、Socket编程
 
 Socket 编程是指编写程序以创建 **Sockets** 并通过它们进行通信。*注意这里其实是多个 Socket。*
 
@@ -116,12 +121,12 @@ Socket 库支持多种编程语言，包括 Python 、C、C++等。一般在各�
 
 在典型的客户端-服务器模型中，服务器会在特定端口上监听连接请求，等待客户端发起连接。一旦连接建立，客户端和服务器就可以通过 Socket 发送和接收数据。
 
-### Nodejs实践
+### 1. Nodejs实践
 
 下面是在 Nodejs 中使用 socket 模块。[**net**](https://nodejs.org/api/net.html)
 在 Node.js 中，你可以使用内置的 `net` 模块来操作 TCP sockets，以及 `dgram` 模块来处理 UDP sockets。以下是如何使用 Node.js 的 `net` 模块创建一个简单的 TCP 服务器和客户端的例子。
 
-#### 创建 TCP 服务端
+#### 1.1 创建 TCP 服务端
 
 ```javascript
 const net = require('net');
@@ -154,7 +159,7 @@ server.listen(3000, () => {
 
 服务器通过调用 `listen` 方法并指定一个端口来开始监听网络连接。
 
-#### 创建 TCP 客户端
+#### 1.2 创建 TCP 客户端
 
 ```javascript
 const net = require('net');
@@ -183,13 +188,13 @@ Nodejs 的 `net` 模块提供的 TCP 网络 API 是专门针对流式套接字�
 
 *其他的一些语言的网络语会需要在调用时指定类型，比如 Python。*
 
-### Python实践
+### 2. Python实践
 
 python 的 socket 库需要指定 `socket.AF_INET` 和 `socket.SOCK_STREAM` 来创建一个 **IPv4** 的套接字。
 
-#### 建立有效的 TCP 连接
+#### 2.1 建立有效的 TCP 连接
 
-##### 创建 TCP 服务端
+##### 2.1.1 创建 TCP 服务端
 
 ```python
 import socket
@@ -235,7 +240,7 @@ if __name__ == '__main__':
 
 一个无限循环确保了 TCP 服务器可以像守护进程一样运行，永远地等待并处理客户端的连接请求。当然，在实际部署中，服务器通常会加入逻辑来优雅地处理关闭请求，以及错误处理和资源管理，以确保服务器稳定运行。
 
-##### 创建 TCP 客户端
+##### 2.1.2 创建 TCP 客户端
 
 ```python
 import socket
@@ -270,9 +275,9 @@ Hello, Tracy!
 Hello, Sarah!
 ```
 
-#### 建立有效的 UDP 连接
+#### 2.2 建立有效的 UDP 连接
 
-##### 创建 UDP 服务端
+##### 2.2.1 创建 UDP 服务端
 
 创建文件 `udp_server.py `
 
@@ -290,7 +295,7 @@ while True:
     s.sendto(b'Hello, %s!' % data, addr)
 ```
 
-##### 创建 UDP 客户端
+##### 2.2.2 创建 UDP 客户端
 
 创建文件 `udp_client.py `
 
