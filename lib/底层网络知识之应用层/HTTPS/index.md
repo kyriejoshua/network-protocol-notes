@@ -359,6 +359,55 @@ if __name__ == "__main__":
 
 颁发数字证书的权威机构称为 CA.
 
-## 三、SSL 加密
+授信数字证书的方式是发送请求给 CA，CA 通过自己的签名算法，用 CA 的私钥给第三方公司的公钥签名，形成第三方公司的证书。
 
-**浏览器和服务器先通过 RSA 交换 AES 口令建立连接，然后用对称加密算法进行通信。**
+```mermaid
+sequenceDiagram
+	Actor Client
+	Client ->> +CA: request
+	CA ->> -CA: sign
+	CA ->> Client: 私钥给公钥签名
+```
+
+各大 CA 机构的公钥是默认安装在操作系统里的。
+
+## 三、HTTPS 协议
+
+### 1. 与 HTTP 区别
+
+* HTTP 默认端口是 80，HTTPS 默认端口 443.
+* HTTP 是明文传输，HTTPS 协议通过 SSL 进行加密，更具安全性。
+	* SSL 加密是应用层的加密。
+* HTTPS 有 CA 认证证书，证书认证需要费用。
+* HTTPS 握手阶段因为流程更多，会相对更加耗时，页面加载时间相对变长。
+
+### 2. SSL 加密协议
+
+**浏览器和服务器先通过 RSA 交换 AES 口令建立连接，然后用对称加密算法(会话密钥)进行通信。**
+
+会话密钥 = `pre master` + `client random` + `server random`
+
+```mermaid
+sequenceDiagram
+autonumber
+actor Client
+
+Client ->> Server: Client Hello
+note right of Client: 客户端发送支持的 SSL 版本
+Server ->> Client: Server Hello
+note left of Server: 服务端从中选择确认的 SSL 版本号
+Server ->> +Client: Certificate 发送证书
+note left of Server: 证书里含有公钥，客户端使用根证书进行证书校验
+Client ->> -Client: 生成对称密钥(pre master)
+note right of Client: AES 对称加密算法
+Client ->> +Server: 使用服务端的公钥加密这个对称密钥并发送
+note left of Server: SSL 使用的是 RSA 非对称加密
+Server ->> -Server: 使用服务端私钥解密，获取对称密钥(pre master)
+Server ->> Client: 使用对称密钥完成 finish 消息
+note over Client, Server: 双方使用对称密钥加密消息，开始通信
+```
+
+SSL 加密的风险：
+* 一旦私钥泄露，可以破解得到前序消息，之前的所有的过往消息都能破解。
+
+### 3. TLS 加密协议
