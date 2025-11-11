@@ -354,6 +354,15 @@ if __name__ == "__main__":
 ## 二、数字证书
 
 数字证书包括证书的发布机构，有效期，所有者，公钥。
+详细的数字证书可能包括以下内容：
+* 域名；
+* 电子邮件地址；
+* 企业或个人身份；
+* 用于启用加密的公钥；
+* 颁发 CA 的详细信息；
+* 有效期；
+* 证书序列号；
+* 签名防止篡改。
 
 ### 1. CA
 
@@ -361,15 +370,24 @@ if __name__ == "__main__":
 
 授信数字证书的方式是发送请求给 CA，CA 通过自己的签名算法，用 CA 的私钥给第三方公司的公钥签名，形成第三方公司的证书。
 
+> * CA 通过证书链形成信任。
+> * 证书链通过中间颁发 CA 把最终实体证书链接（第三方）接回受信任的根 CA 证书。
+> 	* 受信任的根 CA 证书。 
+> 	* root 颁发的中间 CA 证书。
+> 	* 向申请人颁发的实体证书。
+
+根 CA 证书，常见的有 Apple，MicroSoft，内置在各自的操作系统中。
+**由商业 CA 签发的证书**: 如 DigiCert、GlobalSign 和 GeoTrust 等提供的根证书，通常用于商业 SSL 证书。
+
 ```mermaid
 sequenceDiagram
 	Actor Client
 	Client ->> +CA: request
-	CA ->> -CA: sign
-	CA ->> Client: 私钥给公钥签名
+	CA ->> CA: sign
+	CA ->> -Client: 私钥给公钥签名
 ```
 
-各大 CA 机构的公钥是默认安装在操作系统里的。
+各大 CA 机构的公钥是默认安装在操作系统里的。Mac 的根证书可以在钥匙串中查看。
 
 ## 三、HTTPS 协议
 
@@ -381,33 +399,129 @@ sequenceDiagram
 * HTTPS 有 CA 认证证书，证书认证需要费用。
 * HTTPS 握手阶段因为流程更多，会相对更加耗时，页面加载时间相对变长。
 
-### 2. SSL 加密协议
+### 2. 中间人攻击
+
+为了更好的理解最终版本的协议设计，可以先尝试理解中间人是如何攻击的。
+
+```mermaid
+sequenceDiagram
+actor Client
+actor Middle
+
+Client ->> +Server: 发送消息请求公钥
+Server ->> -Middle: 响应消息，发送公钥 A
+note over Middle: 中间人劫持服务端消息，伪造公钥 B
+Middle -->> +Client: 发送伪造的公钥 B
+Client ->> Client: 本地保存伪造的公钥 B
+Client ->> -Middle: 发送使用公钥 B 加密的消息(Hello)
+note over Middle: 中间人劫持消息，伪造消息内容
+Middle -->> +Server: 发送使用公钥 A 伪造的消息(Hi)
+Server ->> -Middle: 发送使用真实私钥 A 的消息(Good)
+note over Middle: 中间人劫持消息，先用正确公钥解密，再通过伪造公钥加密伪造的消息内容
+Middle -->> Client: 发送使用伪造私钥 B 的消息(Bad)
+alt 劫持的消息通信
+	Client <<->> Server: 互相通信
+end
+```
+
+所以需要具有公信力的公认公钥，并且与网站域名等关键信息而绑定。
+
+### 3. SSL 加密协议
 
 **浏览器和服务器先通过 RSA 交换 AES 口令建立连接，然后用对称加密算法(会话密钥)进行通信。**
+
+#### 3.1 流程图
 
 会话密钥 = `pre master` + `client random` + `server random`
 
 ```mermaid
 sequenceDiagram
-autonumber
 actor Client
-
-Client ->> Server: Client Hello
+Client ->> +Server: Client Hello
 note right of Client: 客户端发送支持的 SSL 版本
 Server ->> Client: Server Hello
 note left of Server: 服务端从中选择确认的 SSL 版本号
-Server ->> +Client: Certificate 发送证书
+Server ->> +Client: Certificate 发送 SSL 证书
+deactivate Server
 note left of Server: 证书里含有公钥，客户端使用根证书进行证书校验
-Client ->> -Client: 生成对称密钥(pre master)
+Client ->> Client: 生成对称密钥(pre master)
 note right of Client: AES 对称加密算法
 Client ->> +Server: 使用服务端的公钥加密这个对称密钥并发送
+deactivate Client
 note left of Server: SSL 使用的是 RSA 非对称加密
-Server ->> -Server: 使用服务端私钥解密，获取对称密钥(pre master)
-Server ->> Client: 使用对称密钥完成 finish 消息
+Server ->> Server: 使用服务端私钥解密，获取对称密钥(pre master)
+Server ->> -Client: 使用对称密钥完成 finish 消息
 note over Client, Server: 双方使用对称密钥加密消息，开始通信
+Server <<->> Client: 互相通信
 ```
+
+**为避免频繁建立连接，客户端和服务端会维护一个额 sessionId，在一段时间内保持这个 sessionId 来维持通信，服务端就可以使用已有的对称密钥继续通信。**
+
+#### 3.2 风险
 
 SSL 加密的风险：
 * 一旦私钥泄露，可以破解得到前序消息，之前的所有的过往消息都能破解。
 
-### 3. TLS 加密协议
+### 4. TLS 加密协议 TODO
+
+TLS 是升级版本的 SSL。实际上所有 SSL 版本在现代已经弃用，通常说 SSL 其实指代的是 TLS，仅仅是因为 SSL 这个名称的传播更为广泛。
+
+#### 4.1 版本 1.2 及以下的建立连接过程
+
+```mermaid
+sequenceDiagram
+actor Client
+Client ->> +Server: Client Hello
+note right of Client: 客户端发送支持的 TSL 版本
+Server ->> Client: Server Hello
+note left of Server: 服务端从中选择确认的 TSL 版本号
+Server ->> +Client: Certificate 发送TSL(SSL)证书
+deactivate Server
+note left of Server: 证书里含有公钥，客户端使用根证书进行证书校验
+Client ->> Client: 生成对称密钥(pre master)预主密钥
+note right of Client: AES 对称加密算法
+Client ->> +Server: 使用服务端的公钥加密这个对称密钥并发送
+deactivate Client
+note left of Server: 旧版本的 TSL 使用的是 RSA 非对称加密
+Server ->> Server: 使用服务端私钥解密，获取对称密钥(pre master)
+Server ->> -Client: 使用对称密钥完成 finish 消息
+note over Client, Server: 双方使用对称密钥加密消息，开始通信
+Server <<->> Client: 互相通信
+```
+
+#### 4.2 版本 1.3 的建立连接过程
+
+使用 DH 算法替代 RSA，提高安全性的同时减少建立连接的步骤。
+
+```mermaid
+sequenceDiagram
+actor Client
+Client ->> +Server: Client Hello
+note right of Client: 客户端发送支持的 TSL 版本
+Server ->> Client: Server Hello
+note left of Server: 服务端从中选择确认的 TSL 版本号
+Server ->> Client: Certificate 发送TSL(SSL)证书
+Server ->> +Client: 同时对以上发送的所有消息生成数字签名
+deactivate Server
+note left of Server: 客户端验证服务端的数字签名
+Client ->> +Server: 客户端发送 DH 参数
+Client ->> Client: 计算预主密钥
+Server ->> Server: 计算预主密钥
+note over Client,Server: 分别使用交换的 DH 参数计算匹配的预主密钥，而不是像 RSA 先生成再发送
+note over Client,Server: 分别使用预主密钥和其他参数生成会话密钥(对称密钥)
+Client ->> Server: 客户端就绪
+Server ->> -Client: 使用对称密钥完成 finish 消息
+deactivate Client
+note over Client, Server: 双方使用对称密钥加密消息，开始通信
+Server <<->> Client: 互相通信
+```
+
+## 四、引申 TODO
+
+开发中常常会用到 Charles,也需要下载证书。
+[[charles|Charles]]
+
+## 五、参考
+
+> [SSL网站](https://www.ssl.com/zh-CN/%E6%96%87%E7%AB%A0%EF%BC%8C/%E4%BB%80%E4%B9%88%E6%98%AF%E8%AF%81%E4%B9%A6%E9%A2%81%E5%8F%91%E6%9C%BA%E6%9E%84-ca/)
+> [tls handshake](https://www.cloudflare.com/zh-cn/learning/ssl/what-happens-in-a-tls-handshake/)
