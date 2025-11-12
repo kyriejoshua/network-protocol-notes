@@ -2,20 +2,20 @@
 
 ### 1. 对称加密
 
-加密和解密的密钥是相同的。用一个加密算法进行加密和解密。
+对称加密是指**加密和解密的密钥是相同的**，用一个加密算法进行加密和解密。
 * winRAR 和 winZIP 压缩包的加密和解密就是同一个。
 
-常用的对称加密算法有 AES，是目前最广泛使用的加密算法。
+常用的对称加密算法有 **AES**，是目前最广泛使用的加密算法。
 
 #### 1.1 AES 算法
 
-加密
+加密过程
 
 ```javascript
 const secret = encrypt(key, message);
 ```
 
-解密
+解密解密过程
 
 ```javascript
 const plain = decrypt(key, password);
@@ -23,8 +23,9 @@ const plain = decrypt(key, password);
 
 ##### 1.1.1 加密模式
 
-ECB 是最简单的加密模式，只需要一个固定长度的密钥，固定的明文会生成固定的密文，这样的加密方式简单但也不可靠。
-CBC 模式通过使用一个随机数作为 IV 参数，这样可以让每次生成的密文都不相同。
+AES 算法有着不同的加密模式。
+* ECB 是最简单的加密模式，只需要一个固定长度的密钥，固定的明文会生成固定的密文，这样的加密方式简单但也不可靠。
+* CBC 模式通过使用一个随机数作为 IV 参数，这样可以让每次生成的密文都不相同，相对更安全。
 
 ##### 1.1.1 算法实现
 
@@ -276,13 +277,18 @@ print("\n解密后的明文:", plaintext.decode())
 ### 3. 签名算法
 
 非对称加密里，使用公钥加密，私钥解密，可以进行通信。反之，使用私钥加密，公钥解密，也有实际的应用场景。
-这类场景的最终意义不在于加密，而在于证明消息由谁发出，换言之，这成为消息发送者的，独一无二的签名，**数字签名**。
+这类场景的最终意义不在于加密，而在于**证明消息由谁发出**，换言之，这成为消息发送者的独一无二的签名，**数字签名**。
 
 不过实际应用的时候，不是直接对消息进行签名，而是对消息的哈希进行签名。
+* 消息的文本每次长短不一，为了统一方便，使用哈希来签名。
+
+加密过程
 
 ```javascript
 const signature = encrypt(privateKey, sha256(message));
 ```
+
+解密过程
 
 ```javascript
 const hash = decrypt(publicKey, signature);
@@ -366,7 +372,7 @@ if __name__ == "__main__":
 
 ### 1. CA
 
-颁发数字证书的权威机构称为 CA.
+**颁发数字证书的权威机构称为 CA.**
 
 授信数字证书的方式是发送请求给 CA，CA 通过自己的签名算法，用 CA 的私钥给第三方公司的公钥签名，形成第三方公司的证书。
 
@@ -455,14 +461,14 @@ note over Client, Server: 双方使用对称密钥加密消息，开始通信
 Server <<->> Client: 互相通信
 ```
 
-**为避免频繁建立连接，客户端和服务端会维护一个额 sessionId，在一段时间内保持这个 sessionId 来维持通信，服务端就可以使用已有的对称密钥继续通信。**
+**为避免频繁建立连接，客户端和服务端会维护一个 sessionId，在一段时间内保持这个 sessionId 来维持通信，sessionId 内会记住对应的会话密钥。服务端就可以使用已有的对称密钥继续通信。**
 
 #### 3.2 风险
 
 SSL 加密的风险：
 * 一旦私钥泄露，可以破解得到前序消息，之前的所有的过往消息都能破解。
 
-### 4. TLS 加密协议 TODO
+### 4. TLS 加密协议
 
 TLS 是升级版本的 SSL。实际上所有 SSL 版本在现代已经弃用，通常说 SSL 其实指代的是 TLS，仅仅是因为 SSL 这个名称的传播更为广泛。
 
@@ -516,6 +522,52 @@ note over Client, Server: 双方使用对称密钥加密消息，开始通信
 Server <<->> Client: 互相通信
 ```
 
+##### 4.2.1 DH 算法
+
+上文提到的 DH 算法是 RSA 算法的改进，用于解决参数在不安全信道中可能泄露的问题。
+
+在不安全信道中，传输已经加密的文件是可行的，但如果直接传输参数本身，就存在泄露的风险。
+
+DH 纯粹使用数学理论，在不互相直接传输参数的情况下，完成参数的交换。
+
+> DH 算法的安全性基于离散对数问题的困难性：
+> * 已知p、g、A，计算a是困难的（即从`A = g^a mod p` 中求 a 是困难的）。同样，从 `B = g^b mod p` 中求 b 也是困难的。
+> * 因此，即使攻击者截获了A 和 B，也无法计算出共享密钥 `s = g^(ab) mod p` 中的这个值 **s**。
+
+###### 使用 js 实现
+
+```javascript
+// 超简化的 DH 实现（仅用于理解原理）
+function simpleDH() {
+    // 公共参数
+    const p = 23n; // 质数
+    const g = 5n;  // 生成元
+    
+    // Alice 选择私钥
+    const aPrivate = 6n; // Alice 的私钥
+    const aPublic = (g ** aPrivate) % p; // Alice 的公钥
+    
+    // Bob 选择私钥
+    const bPrivate = 15n; // Bob 的私钥
+    const bPublic = (g ** bPrivate) % p; // Bob 的公钥
+    
+    // 密钥交换
+    const aliceSecret = (bPublic ** aPrivate) % p;
+    const bobSecret = (aPublic ** bPrivate) % p;
+    
+    console.log("简化版 DH 演示:");
+    console.log("Alice 私钥:", aPrivate.toString());
+    console.log("Alice 公钥:", aPublic.toString());
+    console.log("Bob 私钥:", bPrivate.toString());
+    console.log("Bob 公钥:", bPublic.toString());
+    console.log("Alice 共享密钥:", aliceSecret.toString());
+    console.log("Bob 共享密钥:", bobSecret.toString());
+    console.log("密钥匹配:", aliceSecret === bobSecret);
+}
+
+simpleDH();
+```
+ 
 ## 四、引申 TODO
 
 开发中常常会用到 Charles,也需要下载证书。
@@ -525,3 +577,4 @@ Server <<->> Client: 互相通信
 
 > [SSL网站](https://www.ssl.com/zh-CN/%E6%96%87%E7%AB%A0%EF%BC%8C/%E4%BB%80%E4%B9%88%E6%98%AF%E8%AF%81%E4%B9%A6%E9%A2%81%E5%8F%91%E6%9C%BA%E6%9E%84-ca/)
 > [tls handshake](https://www.cloudflare.com/zh-cn/learning/ssl/what-happens-in-a-tls-handshake/)
+> [廖雪峰教程](https://liaoxuefeng.com/books/java/security/cert/index.html)
