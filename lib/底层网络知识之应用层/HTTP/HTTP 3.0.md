@@ -2,6 +2,104 @@
 
 QUIC 是基于 UDP 的协议，是构成 HTTP3 的基础。
 
+## 一、QUIC 的结构
+
+### 1. QUIC 包结构
+
+QUIC 是基于 UDP 的，因此包头是 UDP。
+[[../../底层网络知识之重要的传输层/UDP#二、UDP 格式|UDP 格式]]
+
+#### 1.1 包头结构
+
+##### 1.1.1 比特单位
+
+```mermaid
+---
+title: "QUIC数据包结构(bits)"
+---
+packet-beta
+0-7: "Flags"
+8-63: "Connection Id"
+64-95: "Version"
+96-127: "包序号，长度不固定，8-48 之间"
+```
+
+##### 1.1.2 字节单位
+
+```mermaid
+---
+title: "QUIC数据包结构(bytes)"
+---
+packet-beta
+0-1: "Flags"
+2-9: "DCID SCID"
+10-13: "Version"
+14-17: "包序号，长度不固定"
+```
+
+#### 1.2 报文结构
+
+##### 1.2.1 报文内容比特单位
+
+```mermaid
+---
+title: "QUIC数据包结构(bits)"
+---
+packet-beta
+0-7: "Frame Type"
+8-31: "StreamId(1-4bytes)"
+32-63: "offset(0-8bytes)"
+64-79: "Data Length"
+80-127: "Data"
+```
+
+```mermaid
+---
+title: "QUIC数据包结构(bytes)"
+---
+packet-beta
+0-1: "Frame"
+2-3: "Frame"
+```
+
+##### 1.2.2 框架图
+
+```mermaid
+block-beta
+	columns 12
+	Flags:1
+	CID["ConnectionId"]:2
+	Version:2
+	PN["Packet Number"]:3
+	Frames["Frames"]:4
+	space:12
+	block:groupCID:2
+		columns 2
+		DCID:1
+		SCID:1
+	end
+	block:groupFrames:10
+		columns 10
+		Frame1 Frame2 Frame3 Frame4
+	end
+	space:12
+	block:groupFrame:4
+		columns 4
+		type payload
+	end
+	space:12
+	block:groupPayload:4
+		columns 4
+		streamId offset dl["data Length"] Data
+	end
+	
+	Frames --> groupFrames
+	CID --> groupCID
+	Frame1 --> groupFrame
+	payload --> groupPayload
+```
+## 二、QUIC 的优化
+
 ### [图解QUIC](https://cangsdarm.github.io/illustrate/quic)
 
 ### 1. 机制一：自定义连接机制
