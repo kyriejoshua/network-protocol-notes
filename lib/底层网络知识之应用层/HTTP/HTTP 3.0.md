@@ -98,6 +98,46 @@ block-beta
 	Frame1 --> groupFrame
 	payload --> groupPayload
 ```
+
+#### 1.3 包头类型
+
+QUIC 分为长包头和短包头。
+长包头用来建立连接，数据包相对多一些。
+短包头用来传输数据。
+
+##### 1.3.1 长包头
+
+```mermaid
+---
+title: "QUIC长包头结构(bits)"
+---
+packet-beta
+0: "长包头1"
+1: "1"
+2-5: "类型"
+6-7: "保留位"
+8-39: "版本号"
+40-71: "目标连接ID (DCID) "
+72-103: "源连接 ID（SCID）"
+104-127: "包序号，长度不固定"
+```
+
+##### 1.3.2 短包头
+
+```mermaid
+---
+title: "QUIC短包头结构(bits)"
+---
+packet-beta
+0: "短包头0"
+1: "密钥"
+2-3: "包号长度"
+4-5: "保留位"
+6-37: "目标连接ID (DCID) "
+38-69: "截断的包序号，长度不固定"
+70-127: "Payload"
+```
+
 ## 二、QUIC 的优化
 
 ### [图解QUIC](https://cangsdarm.github.io/illustrate/quic)
@@ -226,7 +266,62 @@ Client <<->> Server: Client 双方开始通信
 ### 2. 机制二：自定义重传机制
 
 TCP 使用序号和应答机制来解决顺序问题和丢包问题。
+QUIC 使用序号和相对位置来重传。
+* `packet number`字段用来标识包序号，如果没有收到该序号的响应，就会重发一个包。包的序号在当前最近发送的序号基础上递增，通过 offset 相对位置来确认数据的具体位置。
+
+例如下图，序号 2 的包丢失了，重传的包序号是 2. Offset 是 1.
+```mermaid
+sequenceDiagram
+actor Client
+Client ->> Server: PKN=1,Offset=0
+Client ->> Server: PKN=2,Offset=1
+Client ->> Server: PKN=3,Offset=2
+Server ->> Client: SACK=1,3
+Client ->> Server: PKN=4,Offset=1
+```
 
 ### 3. 机制三：无阻塞的多路复用
 
+QUIC 把连接能够拆分成多个流 Stream，这些多个 Stream 并不像 HTTP2 的 TCP 一样共享一个滑动窗口，而是分别使用不同的滑动窗口。而且这些 Stream 之间完全不是相互依赖的。
+
 ### 4. 机制四：自定义流量控制
+
+#### 4.1 流量控制
+
+QUIC 也使用和 TCP 类似的滑动窗口机制来实现流量控制。
+
+QUIC 的滑动窗口分成两个级别，`Connection` 和 `Stream`。
+* `Connection` 规定了所有数据流的大小；
+* `Stream` 流量控制规定了每个流的大小。
+
+```mermaid
+---
+title: stream1
+---
+block-beta
+columns 12
+s11["发送窗口 100"]:10 s12["可用窗口 20"]:2
+style s12 fill:#bbf
+```
+
+```mermaid
+---
+title: stream2
+---
+block-beta
+columns 12
+s21["发送窗口 90"]:9 s22["可用窗口 30"]:3
+style s22 fill:#bbf
+```
+
+```mermaid
+---
+title: stream3
+---
+block-beta
+columns 12
+s31["发送窗口 110"]:10 s32["可用窗口 10"]:1
+style s32 fill:#bbf
+```
+
+`Connection` 的可用窗口大小是 **60**.
