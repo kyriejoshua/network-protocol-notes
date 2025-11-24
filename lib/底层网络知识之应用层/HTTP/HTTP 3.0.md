@@ -2,6 +2,8 @@
 
 QUIC 是基于 UDP 的协议，是构成 HTTP3 的基础。
 
+![](https://pic4.zhimg.com/v2-d61a62fdfb08ed3882e1018136ce6b2f_1440w.jpg)
+
 ## 一、QUIC 的结构
 
 ### 1. QUIC 包结构
@@ -229,7 +231,6 @@ Client1.3 <<->> Server1.3: Client 双方开始通信
 
 新的 QUIC 初次连接只需要 1 个 RTT 就可以开始传输。因为 QUIC 集成了 TLS 安全协议。
 
-TODO
 
 ```mermaid
 sequenceDiagram
@@ -265,11 +266,13 @@ Client <<->> Server: Client 双方开始通信
 
 ### 2. 机制二：自定义重传机制
 
-TCP 使用序号和应答机制来解决顺序问题和丢包问题。
+TCP 使用**序号和应答机制**来解决顺序问题和丢包问题。
 QUIC 使用序号和相对位置来重传。
-* `packet number`字段用来标识包序号，如果没有收到该序号的响应，就会重发一个包。包的序号在当前最近发送的序号基础上递增，通过 offset 相对位置来确认数据的具体位置。
+* `packet number`字段用来标识包序号，如果没有收到该序号的响应，就会重发一个包。包的序号在当前最近发送的序号基础上依次递增，通过 `offset` 相对位置来确认数据的具体位置。
+* `ACK` 返回的序号则和发送的序号对应上。
 
-例如下图，序号 2 的包丢失了，重传的包序号是 2. Offset 是 1.
+例如下图，序号 2 的包丢失了，重传的包序号是 2. `offset` 是 1.
+
 ```mermaid
 sequenceDiagram
 actor Client
@@ -278,11 +281,14 @@ Client ->> Server: PKN=2,Offset=1
 Client ->> Server: PKN=3,Offset=2
 Server ->> Client: SACK=1,3
 Client ->> Server: PKN=4,Offset=1
+Server ->> Client: SACK=4
 ```
 
 ### 3. 机制三：无阻塞的多路复用
 
-QUIC 把连接能够拆分成多个流 Stream，这些多个 Stream 并不像 HTTP2 的 TCP 一样共享一个滑动窗口，而是分别使用不同的滑动窗口。而且这些 Stream 之间完全不是相互依赖的。
+QUIC 把连接能够拆分成多个流 Stream，这些多个 Stream 并不像 HTTP2 的 TCP 一样共享一个滑动窗口，而是分别使用不同的滑动窗口。而且这些 Stream 之间完全不是相互依赖的，并不会发生前后阻塞的情况。
+
+[[HTTP 2.0#3. 多路复用]]
 
 ### 4. 机制四：自定义流量控制
 
@@ -325,3 +331,8 @@ style s32 fill:#bbf
 ```
 
 `Connection` 的可用窗口大小是 **60**.
+
+## 三、参考
+
+> [QUIC 协议](https://zhuanlan.zhihu.com/p/405387352)
+> [RFC9312中文](https://autumnquiche.github.io/RFC9312_Chinese_Simplified/#2.1_QUIC_Packet_Header_Structure)

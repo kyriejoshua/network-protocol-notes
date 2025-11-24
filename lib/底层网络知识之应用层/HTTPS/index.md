@@ -407,6 +407,25 @@ sequenceDiagram
 * HTTPS 有 CA 认证证书，证书认证需要费用。
 * HTTPS 握手阶段因为流程更多，会相对更加耗时，页面加载时间相对变长。
 
+#### 1.1 网络分层协议示意图
+
+```mermaid
+classDiagram
+namespace HTTP {
+    class HTTP层 {
+      TCP
+      IP()
+    }
+}
+namespace HTTPS {
+    class HTTPS层 {
+	  TLS/SSL
+      TCP
+      IP()
+    }
+}
+```
+
 ### 2. 中间人攻击
 
 为了更好的理解最终版本的协议设计，可以先尝试理解中间人是如何攻击的。
