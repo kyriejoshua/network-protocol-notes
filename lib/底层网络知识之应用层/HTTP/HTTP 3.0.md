@@ -104,8 +104,10 @@ block-beta
 #### 1.3 包头类型
 
 QUIC 分为长包头和短包头。
-长包头用来建立连接，数据包相对多一些。
-短包头用来传输数据。
+* 在QUIC版本1中，长包头被用于在连接建立期间传输**加密帧**握手数据、进行版本协商、重试，以及发送0-RTT数据。
+	* 长包头用来建立连接，数据包相对多一些。
+* 在QUIC版本1中，短包头被用于连接建立完成后，并且仅暴露了可选的目标连接ID字段，以及初始的信号量字节，其中包括用于RTT测量的自旋比特位。
+	* 短包头用来传输数据。
 
 ##### 1.3.1 长包头
 
@@ -335,4 +337,5 @@ style s32 fill:#bbf
 ## 三、参考
 
 > [QUIC 协议](https://zhuanlan.zhihu.com/p/405387352)
+> [RFC9000 中文](https://autumnquiche.github.io/RFC9000_Chinese_Simplified/)
 > [RFC9312中文](https://autumnquiche.github.io/RFC9312_Chinese_Simplified/#2.1_QUIC_Packet_Header_Structure)
